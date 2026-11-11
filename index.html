@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02060d"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name="mobile-web-app-capable" content="yes">
+<title>J.A.R.V.I.S.</title>
+<style>
+:root{color-scheme:dark;--bg:#02060d;--panel:#06111dcc;--line:#134a6b;--c:#4fd8ff;--glow:#4fd8ff88;--gold:#ffb347;--muted:#7fa6bf;--ok:#5dffb0}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 50% 0%,#0b2a45 0%,#02060d 60%) fixed;color:#dff6ff;font:15px/1.4 "Segoe UI",system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;background:repeating-linear-gradient(0deg,#4fd8ff08 0 1px,transparent 1px 3px);pointer-events:none;z-index:0}
+main{position:relative;z-index:1;max-width:900px;margin:auto;padding:10px 12px 40px;display:grid;gap:12px}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);letter-spacing:2px;padding-top:6px}
+#clock{color:var(--c);font-size:18px;letter-spacing:3px}
+h1{margin:0;text-align:center;font-weight:300;letter-spacing:12px;color:var(--c);font-size:clamp(22px,6vw,34px);text-shadow:0 0 18px var(--glow)}
+.sub{text-align:center;color:var(--muted);font-size:12px;letter-spacing:3px;margin-top:-6px}
+/* reactor */
+.reactor-wrap{display:grid;place-items:center;padding:4px 0}
+#reactor{width:min(62vw,270px);height:auto;filter:drop-shadow(0 0 14px var(--glow));cursor:pointer;-webkit-tap-highlight-color:transparent}
+#reactor .r1{transform-origin:100px 100px;animation:spin 40s linear infinite}
+#reactor .r2{transform-origin:100px 100px;animation:spin 22s linear infinite reverse}
+#reactor .r3{transform-origin:100px 100px;animation:spin 12s linear infinite}
+#reactor .core{transform-origin:100px 100px;animation:pulse 3s ease-in-out infinite}
+#reactor *{transition:stroke .4s,fill .4s}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.08);opacity:1}}
+body[data-state=listening]{--c:#7dffcf;--glow:#7dffcf99}
+body[data-state=listening] #reactor .core{animation-duration:.9s}
+body[data-state=thinking]{--c:#ffb347;--glow:#ffb34799}
+body[data-state=thinking] #reactor .r3{animation-duration:2s}body[data-state=thinking] #reactor .r2{animation-duration:3s}
+body[data-state=speaking] #reactor .core{animation-duration:.45s}
+#stateLabel{text-align:center;color:var(--c);letter-spacing:5px;font-size:12px;margin-top:-4px;min-height:16px;text-transform:uppercase}
+/* panels */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;position:relative;backdrop-filter:blur(4px)}
+.panel::before,.panel::after{content:"";position:absolute;width:12px;height:12px;border:2px solid var(--c)}
+.panel::before{top:-1px;left:-1px;border-right:0;border-bottom:0}.panel::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+h2{margin:0 0 10px;font-size:12px;letter-spacing:4px;font-weight:600;color:var(--c);text-transform:uppercase}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select,input,button{font:inherit;border-radius:4px;border:1px solid var(--line);padding:10px 12px;background:#04101c;color:#e8f9ff}
+button{cursor:pointer;background:#0a2b44;transition:.15s}button:hover{border-color:var(--c);box-shadow:0 0 10px var(--glow)}
+button.primary{background:#06678c;border-color:var(--c);font-weight:600}button:disabled{opacity:.5}
+button.on{border-color:var(--ok);color:var(--ok);box-shadow:0 0 10px #5dffb066}
+#chat{height:34vh;min-height:210px;overflow:auto;display:flex;flex-direction:column;gap:9px;padding:2px 2px 8px;scroll-behavior:smooth}
+.msg{max-width:92%;padding:9px 12px;border-radius:4px;white-space:pre-wrap;overflow-wrap:anywhere;animation:in .25s}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+.user{align-self:flex-end;background:#0a3b57;border-right:3px solid var(--c)}
+.assistant{align-self:flex-start;background:#0a1a2a;border-left:3px solid var(--gold)}
+.assistant::before{content:"J.A.R.V.I.S.  ";color:var(--gold);font-size:10px;letter-spacing:2px;display:block;margin-bottom:2px}
+#message{flex:1;min-width:150px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{font-size:11px;letter-spacing:1px;color:var(--muted)}.stat b{display:block;color:#e8f9ff;font-size:19px;font-weight:300;letter-spacing:1px}
+.bar{height:4px;background:#0b2436;margin-top:4px;border-radius:2px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--c);transition:width .6s;box-shadow:0 0 8px var(--glow)}
+.bar i.warn{background:var(--gold)}.bar i.crit{background:#ff5d5d}
+.reminder{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #0f3550}
+.hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chips button{font-size:12px;padding:6px 9px;color:var(--muted)}
+/* boot */
+#boot{position:fixed;inset:0;z-index:50;background:#02060d;display:grid;place-items:center;text-align:center;padding:20px;transition:opacity .8s}
+#boot.hide{opacity:0;pointer-events:none}
+#boot h1{font-size:clamp(28px,9vw,52px)}
+#bootLog{font:12px/1.7 ui-monospace,monospace;color:var(--muted);min-height:110px;margin:14px 0;text-align:left;display:inline-block}
+#bootBtn{font-size:16px;letter-spacing:4px;padding:14px 28px}
+@media(max-width:520px){#chat{height:36vh}.row>button{flex:1}}
+</style></head>
+<body data-state="idle">
+
+<div id="boot"><div>
+  <h1>J.A.R.V.I.S.</h1><div class="sub">Just A Rather Very Intelligent System</div>
+  <div id="bootLog"></div><br>
+  <button id="bootBtn" class="primary">INICIAR SISTEMAS</button>
+</div></div>
+
+<main>
+ <div class="top"><span id="statusDot">● CONECTANDO</span><span id="clock">--:--</span></div>
+ <h1>J.A.R.V.I.S.</h1><div class="sub">ASISTENTE PERSONAL · ANDROID</div>
+
+ <div class="reactor-wrap">
+  <svg id="reactor" viewBox="0 0 200 200" aria-label="Reactor de JARVIS. Toca para hablar">
+   <defs><radialGradient id="cg"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="var(--c)"/><stop offset="1" stop-color="var(--c)" stop-opacity="0"/></radialGradient></defs>
+   <g class="r1" fill="none" stroke="var(--c)"><circle cx="100" cy="100" r="94" stroke-width="1" stroke-dasharray="2 7"/><circle cx="100" cy="100" r="88" stroke-width="2" stroke-dasharray="60 14" opacity=".8"/></g>
+   <g class="r2" fill="none" stroke="var(--c)"><circle cx="100" cy="100" r="74" stroke-width="1.5" stroke-dasharray="26 8" opacity=".9"/><circle cx="100" cy="100" r="68" stroke-width=".8"/></g>
+   <g class="r3" id="coils" fill="var(--c)" opacity=".9"></g>
+   <circle cx="100" cy="100" r="38" fill="none" stroke="var(--c)" stroke-width="3" opacity=".9"/>
+   <g class="core"><circle cx="100" cy="100" r="30" fill="url(#cg)"/><circle cx="100" cy="100" r="9" fill="#fff"/></g>
+  </svg>
+ </div>
+ <div id="stateLabel">En espera</div>
+
+ <section class="panel">
+  <div id="chat" aria-live="polite"></div>
+  <div class="row"><input id="message" placeholder="Hable o escriba, señor…" autocomplete="off"><button id="send" class="primary">Enviar</button><button id="mic" title="Hablar una vez">🎙️</button></div>
+  <div class="row" style="margin-top:8px"><button id="wakeBtn">👂 Modo «Jarvis»: apagado</button><button id="speakToggle">🔊 Voz</button><button id="newChat">🗑️ Nueva</button></div>
+  <div class="chips" id="chips"></div>
+ </section>
+
+ <section class="panel">
+  <h2>Diagnóstico del sistema</h2>
+  <div class="stats" id="stats"></div>
+  <p class="hint" id="statHint">Datos de este teléfono (Android limita lo que el navegador puede ver).</p>
+ </section>
+
+ <section class="panel">
+  <h2>Protocolos rápidos</h2>
+  <div class="row"><button data-app="youtube">▶️ YouTube</button><button data-app="whatsapp">💬 WhatsApp</button><button data-app="mapas">🗺️ Mapas</button><button data-app="gmail">✉️ Correo</button><button data-app="spotify">🎵 Spotify</button></div>
+ </section>
+
+ <section class="panel">
+  <h2>Recordatorios</h2>
+  <div class="row"><input id="remTitle" placeholder="¿Qué debo recordarle?" style="flex:1"><input id="remDate" type="datetime-local"></div>
+  <div class="row" style="margin-top:8px"><button id="addReminder" class="primary">Guardar</button><button id="refreshRem">Actualizar</button></div>
+  <div id="reminders" style="margin-top:8px"></div>
+  <p class="hint">También puede decir: «Jarvis, recuérdame llamar a mamá en 10 minutos» o «a las 18:30».</p>
+ </section>
+
+ <section class="panel">
+  <h2>Ajustes</h2>
+  <div class="row"><input id="cfgKey" type="password" placeholder="Clave de Gemini (AIza…)" autocomplete="off" style="flex:1;min-width:100%"></div>
+  <div class="row" style="margin-top:8px"><input id="cfgModel" placeholder="Modelo" style="flex:1"><input id="cfgTitle" placeholder="Cómo llamarle" style="flex:1"><input id="cfgName" placeholder="Su nombre (opcional)" style="flex:1"></div>
+  <div class="row" style="margin-top:8px"><button id="cfgSave" class="primary">Guardar</button><select id="voice" aria-label="Voz" style="flex:1"><option value="">Voz automática</option></select></div>
+  <select id="brain" hidden><option value="gemini">Gemini</option></select>
+  <p class="hint" id="brainHint">La clave se guarda solo en este teléfono. Consíguela gratis en aistudio.google.com/apikey. Si JARVIS no responde, revise el nombre del modelo.</p>
+ </section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let token=sessionStorage.getItem("jarvis_pin")||"";
+let geminiId=localStorage.getItem("jarvis_gemini_id")||"";
+let history=JSON.parse(sessionStorage.getItem("jarvis_history")||"[]");
+let swReg=null;if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").then(r=>swReg=r).catch(()=>{});
+let voiceOn=true, notified=new Set(), TITLE="señor", speaking=false;
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const secure=window.isSecureContext||["localhost","127.0.0.1"].includes(location.hostname);
+
+/* ---------- "Servidor" local en el teléfono ---------- */
+const cfg=()=>({key:localStorage.getItem("jv_key")||"",model:localStorage.getItem("jv_model")||"gemini-3.8-flash",title:localStorage.getItem("jv_title")||"señor",name:localStorage.getItem("jv_name")||""});
+const remsGet=()=>{try{return JSON.parse(localStorage.getItem("jv_rems")||"[]")}catch(_){return[]}};
+const remsSet=r=>localStorage.setItem("jv_rems",JSON.stringify(r));
+const APPS={youtube:"https://www.youtube.com",whatsapp:"https://wa.me/",mapas:"https://www.google.com/maps",maps:"https://www.google.com/maps",gmail:"https://mail.google.com",correo:"https://mail.google.com",google:"https://www.google.com",navegador:"https://www.google.com",internet:"https://www.google.com",firefox:"https://www.google.com",chrome:"https://www.google.com",spotify:"https://open.spotify.com",telegram:"https://t.me",instagram:"https://www.instagram.com",facebook:"https://www.facebook.com",tiktok:"https://www.tiktok.com",netflix:"https://www.netflix.com",traductor:"https://translate.google.com",calendario:"https://calendar.google.com",drive:"https://drive.google.com",fotos:"https://photos.google.com"};
+function openUrl(url,label){
+  const w=window.open(url,"_blank");
+  if(!w){const d=document.createElement("div");d.className="msg assistant";const l=document.createElement("a");l.href=url;l.target="_blank";l.rel="noopener";l.textContent="👉 Toque aquí para abrir "+label;l.style.color="var(--c)";d.appendChild(l);$("chat").appendChild(d);$("chat").scrollTop=$("chat").scrollHeight;return false}
+  return true;
+}
+function sysPrompt(){
+  const c=cfg(),now=new Date().toLocaleString("es",{dateStyle:"full",timeStyle:"short"});
+  return "Eres J.A.R.V.I.S., el asistente virtual personal e inteligente al estilo del mayordomo digital de Tony Stark. Eres educado, eficiente, leal y de ingenio seco y elegante; haces algún comentario sutil o irónico de vez en cuando, sin pasarte y sin faltar al respeto. Hablas en español neutro, formal pero cercano. Llama al usuario «"+c.title+"»"+(c.name?" (se llama "+c.name+")":"")+". Tus respuestas son BREVES (1 a 3 frases) porque se leen en voz alta, sin listas, sin markdown, sin emojis. Si no sabes algo, dilo con honestidad. Nunca afirmes haber hecho una acción en el dispositivo si la aplicación no te lo confirmó. Fecha y hora actual: "+now+".";
+}
+async function geminiChat(message,prev){
+  const c=cfg();if(!c.key)throw new Error("Falta su clave de Gemini. Péguela en Ajustes y pulse Guardar.");
+  const call=p=>fetch("https://generativelanguage.googleapis.com/v1beta/interactions",{method:"POST",headers:{"x-goog-api-key":c.key,"Content-Type":"application/json"},body:JSON.stringify({model:c.model,input:sysPrompt()+"\n\nMensaje del usuario: "+message,...(p?{previous_interaction_id:p}:{})})});
+  let r;
+  try{r=await call(prev);if(!r.ok&&prev&&(r.status===400||r.status===404))r=await call("")}
+  catch(_){throw new Error("No pude conectar con Gemini. Compruebe su Internet.")}
+  if(!r.ok){let d="";try{d=(await r.json()).error?.message||""}catch(_){}
+    throw new Error(r.status===400||r.status===403?"Gemini rechazó la solicitud (revise la clave y el modelo en Ajustes). "+d.slice(0,120):"Gemini respondió HTTP "+r.status+". "+d.slice(0,120))}
+  const data=await r.json();let ans=data.output_text||"";
+  if(!ans){const ch=[];for(const st of data.steps||[])if(st.type==="model_output")for(const it of st.content||[])if(it.type==="text")ch.push(it.text);for(const it of data.outputs||[])if(it.type==="text")ch.push(it.text);ans=ch.join("").trim()}
+  return{answer:ans||"Gemini no devolvió texto.",interaction_id:data.id||""};
+}
+async function api(path,opts={}){
+  const method=(opts.method||"GET").toUpperCase(),body=opts.body?JSON.parse(opts.body):{};
+  if(path==="/api/status")return{title:cfg().title,gemini_configured:!!cfg().key,ollama:false,ollama_model_installed:false};
+  if(path==="/api/system"){
+    const o={cpu:null,ram:null,disk:null,temp:null,battery:null,net:navigator.onLine?(navigator.connection?.effectiveType||"online"):"sin conexión",mem_gb:navigator.deviceMemory||null};
+    try{if(navigator.getBattery){const b=await navigator.getBattery();o.battery={percent:Math.round(b.level*100),status:b.charging?"Charging":"Discharging"}}}catch(_){}
+    try{if(navigator.storage?.estimate){const e=await navigator.storage.estimate();if(e.quota)o.disk=Math.round(100*e.usage/e.quota)}}catch(_){}
+    return o;
+  }
+  if(path==="/api/reminders"&&method==="GET")return remsGet().sort((a,b)=>a.done-b.done||a.due_at.localeCompare(b.due_at));
+  if(path==="/api/reminders"&&method==="POST"){
+    if(!body.title||!body.title.trim())throw new Error("Escriba qué debo recordarle.");
+    if(!body.due_at||isNaN(new Date(body.due_at)))throw new Error("Indique una fecha y hora válidas.");
+    const r=remsGet();r.push({id:Date.now(),title:body.title.trim().slice(0,200),due_at:body.due_at,done:0});remsSet(r);return{ok:true};
+  }
+  let m;
+  if(m=path.match(/^\/api\/reminders\/(\d+)\/done$/)){remsSet(remsGet().map(x=>x.id==m[1]?{...x,done:1}:x));return{ok:true}}
+  if((m=path.match(/^\/api\/reminders\/(\d+)$/))&&method==="DELETE"){remsSet(remsGet().filter(x=>x.id!=m[1]));return{ok:true}}
+  if(path==="/api/open-app"){
+    const name=(body.name||"").toLowerCase().trim();const url=APPS[name];
+    if(!url)throw new Error("No conozco la aplicación «"+name+"». Puedo abrir: "+Object.keys(APPS).slice(0,8).join(", ")+"…");
+    openUrl(url,name);return{ok:true};
+  }
+  if(path==="/api/chat/gemini")return geminiChat(body.message,body.previous_interaction_id||"");
+  throw new Error("Función no disponible en la versión Android.");
+}
+
+/* ---------- UI ---------- */
+function setState(s,label){document.body.dataset.state=s;$("stateLabel").textContent=label||({idle:"En espera",listening:"Escuchando",thinking:"Procesando",speaking:"Respondiendo"})[s]}
+function addMsg(text,who){const d=document.createElement("div");d.className="msg "+who;d.textContent=text;$("chat").appendChild(d);$("chat").scrollTop=$("chat").scrollHeight}
+function tick(){const d=new Date();$("clock").textContent=d.toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"})}
+setInterval(tick,5000);tick();
+(function coils(){const g=$("coils");for(let i=0;i<10;i++){const r=document.createElementNS("http://www.w3.org/2000/svg","rect");r.setAttribute("x","96");r.setAttribute("y","48");r.setAttribute("width","8");r.setAttribute("height","14");r.setAttribute("rx","1");r.setAttribute("transform",`rotate(${i*36} 100 100)`);g.appendChild(r)}})();
+function greeting(){const h=new Date().getHours();return h<6?"Buenas madrugadas":h<13?"Buenos días":h<20?"Buenas tardes":"Buenas noches"}
+function dayPart(){const h=new Date().getHours();return h<6?"de la madrugada":h<13?"de la mañana":h<20?"de la tarde":"de la noche"}
+
+/* ---------- Voz de salida ---------- */
+const MALE=/jorge|diego|pablo|raul|raúl|carlos|juan|enrique|miguel|alvaro|álvaro|male|hombre|david|google español/i;
+function esVoices(){return speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith("es"))}
+function loadVoices(){
+  const vs=esVoices(),old=localStorage.getItem("jarvis_voice")||"";
+  $("voice").innerHTML='<option value="">Voz automática (masculina si existe)</option>';
+  vs.forEach(v=>{const o=document.createElement("option");o.value=v.name;o.textContent=v.name+" ("+v.lang+")";$("voice").appendChild(o)});
+  $("voice").value=old;
+}
+if("speechSynthesis"in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+$("voice").onchange=()=>localStorage.setItem("jarvis_voice",$("voice").value);
+function clean(t){return t.replace(/[*_#`~>]/g,"").replace(/\s+/g," ").trim().slice(0,700)}
+function speak(text){
+  return new Promise(res=>{
+    if(!voiceOn||!("speechSynthesis"in window)){res();return}
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(clean(text));u.lang="es-ES";
+    const vs=esVoices(),chosen=$("voice").value;
+    u.voice=vs.find(v=>v.name===chosen)||vs.find(v=>MALE.test(v.name))||vs[0]||null;
+    u.rate=.95;u.pitch=chosen||(u.voice&&MALE.test(u.voice.name))?1:.75;
+    speaking=true;pauseWake();setState("speaking");
+    const done=()=>{if(!speaking)return;speaking=false;setState("idle");resumeWake();res()};
+    u.onend=done;u.onerror=done;
+    setTimeout(()=>{if(speaking&&!speechSynthesis.speaking)done()},400+text.length*90);
+    speechSynthesis.speak(u);
+  });
+}
+$("speakToggle").onclick=()=>{voiceOn=!voiceOn;$("speakToggle").textContent=voiceOn?"🔊 Voz":"🔇 Voz";if(!voiceOn)speechSynthesis.cancel()};
+async function say(text){addMsg(text,"assistant");await speak(text)}
+
+/* ---------- Reconocimiento: una vez ---------- */
+function listenOnce(){
+  if(!SR){say("Este navegador no ofrece reconocimiento de voz, "+TITLE+". Use Chrome en Android.");return}
+  if(!secure){say("El micrófono requiere HTTPS. Active USE_HTTPS=1 en el archivo .env y reinicie el sistema.");return}
+  pauseWake();speechSynthesis.cancel();
+  const rec=new SR();rec.lang="es-ES";rec.interimResults=false;
+  setState("listening");$("mic").disabled=true;
+  rec.onresult=e=>process(e.results[0][0].transcript);
+  rec.onerror=e=>{if(e.error==="not-allowed")say("Permiso de micrófono denegado. Actívelo en los ajustes del sitio en Chrome.");else if(e.error!=="no-speech"&&e.error!=="aborted")addMsg("Error de voz: "+e.error,"assistant")};
+  rec.onend=()=>{$("mic").disabled=false;if(!speaking)setState("idle");resumeWake()};
+  try{rec.start()}catch(_){$("mic").disabled=false}
+}
+$("mic").onclick=listenOnce;$("reactor").onclick=listenOnce;
+
+/* ---------- Modo «Jarvis» (palabra de activación) ---------- */
+let wakeOn=false,wakeRec=null,awaiting=false,awaitTimer=null,wakeBusy=false;
+const WAKE=/\b(jarvis|yarvis|jarbis|harvis|jarvi|yarbis|jarvin)\b/;
+const norm=t=>t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[¿?¡!.,;:]/g,"").trim();
+function setWakeUI(){$("wakeBtn").textContent=wakeOn?"👂 Modo «Jarvis»: ENCENDIDO":"👂 Modo «Jarvis»: apagado";$("wakeBtn").classList.toggle("on",wakeOn)}
+function startWake(){
+  if(!SR||!secure||!wakeOn||wakeBusy||speaking)return;
+  wakeRec=new SR();wakeRec.lang="es-ES";wakeRec.continuous=true;wakeRec.interimResults=false;
+  wakeRec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)heard(e.results[i][0].transcript)}};
+  wakeRec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed"){wakeOn=false;setWakeUI();say("No tengo permiso de micrófono, "+TITLE+".")}};
+  wakeRec.onend=()=>{wakeBusy=false;if(wakeOn&&!speaking)setTimeout(startWake,350)};
+  try{wakeRec.start();wakeBusy=true}catch(_){}
+}
+function pauseWake(){if(wakeRec){wakeRec.onend=null;try{wakeRec.abort()}catch(_){}wakeRec=null;wakeBusy=false}}
+function resumeWake(){if(wakeOn)setTimeout(startWake,500)}
+async function heard(raw){
+  const t=norm(raw),m=t.match(WAKE);
+  if(m){
+    const cmd=t.slice(t.indexOf(m[0])+m[0].length).replace(/^[\s,]+/,"");
+    if(cmd.length>2){process(raw.slice(raw.toLowerCase().search(WAKE)).replace(/^\S+[\s,]*/,""))}
+    else{awaiting=true;clearTimeout(awaitTimer);awaitTimer=setTimeout(()=>awaiting=false,9000);setState("listening");await speak("A sus órdenes, "+TITLE+".");setState("listening")}
+  }else if(awaiting){awaiting=false;clearTimeout(awaitTimer);process(raw)}
+}
+$("wakeBtn").onclick=()=>{
+  if(!SR||!secure){say(!SR?"Este navegador no soporta reconocimiento de voz.":"El modo «Jarvis» necesita HTTPS para usar el micrófono.");return}
+  wakeOn=!wakeOn;setWakeUI();localStorage.setItem("jarvis_wake",wakeOn?"1":"0");
+  if(wakeOn){say("Modo de escucha activado. Diga «Jarvis» cuando me necesite, "+TITLE+".")}else pauseWake();
+};
+
+/* ---------- Comandos locales ---------- */
+const pad=n=>String(n).padStart(2,"0");
+const isoLocal=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+async function sysSummary(){
+  const s=await api("/api/system"),p=[];
+  if(s.battery)p.push(`batería al ${s.battery.percent} por ciento${s.battery.status==="Charging"?", cargando":""}`);
+  p.push(s.net==="sin conexión"?"sin conexión a Internet":`conexión ${s.net}`);
+  return `Diagnóstico completo, ${TITLE}: ${p.join(", ")}. `+((s.battery&&s.battery.percent<20&&s.battery.status!=="Charging")?"Le sugiero conectar el cargador.":"Todos los sistemas operan con normalidad.");
+}
+async function localIntent(text){
+  const t=norm(text).replace(/^jarvis\s*/,"");
+  let m;
+  if(/^(hola|buenas|buenos dias|buenas tardes|buenas noches|que tal)\b/.test(t)){await say(`${greeting()}, ${TITLE}. ¿En qué puedo ayudarle?`);return true}
+  if(/^(gracias|muchas gracias)/.test(t)){await say(`Un placer, ${TITLE}.`);return true}
+  if(/(que hora es|dime la hora|la hora)/.test(t)){const d=new Date();await say(`Son las ${d.toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"})} ${dayPart()}, ${TITLE}.`);return true}
+  if(/(que dia es|que fecha es|fecha de hoy|dia es hoy)/.test(t)){await say(`Hoy es ${new Date().toLocaleDateString("es",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}, ${TITLE}.`);return true}
+  if(/(estado del sistema|bateria|diagnostico|como estan los sistemas|como esta el sistema|analisis del sistema)/.test(t)){setState("thinking","Analizando");try{await say(await sysSummary())}catch(e){await say(e.message)}return true}
+  if(/^(callate|silencio|para|detente|basta)$/.test(t)){speechSynthesis.cancel();return true}
+  if(m=t.match(/^(?:busca|buscame|googlea|investiga)\s+(?:en google\s+)?(.+)$/)){const q=m[1].trim();await say(`Buscando «${q}», ${TITLE}.`);openUrl("https://www.google.com/search?q="+encodeURIComponent(q),"la búsqueda");return true}
+  if(m=t.match(/^(?:reproduce|pon|ponme|pon me)\s+(?:musica de\s+|el video de\s+|la cancion\s+)?(.+?)(?:\s+en youtube)?$/)){const q=m[1].trim();await say(`Enseguida, ${TITLE}.`);openUrl("https://www.youtube.com/results?search_query="+encodeURIComponent(q),"YouTube");return true}
+  if(m=t.match(/^(?:abre|abrir|abreme|inicia|lanza|ejecuta)\s+(?:el |la |los |las )?(.+)$/)){
+    let name=m[1].trim();if(name==="navegador"||name==="internet")name="firefox";
+    try{await api("/api/open-app",{method:"POST",body:JSON.stringify({name})});await say(`Por supuesto, ${TITLE}. Abriendo ${name}.`)}catch(e){await say(e.message)}
+    return true;
+  }
+  if(m=t.match(/^(?:recuerdame|recordame|recuerda|ponme un recordatorio(?: de| para)?)\s+(.+?)\s+en\s+(\d+|un|una|media)\s*(minutos?|horas?|min)\b/)){
+    let n=m[2]==="un"||m[2]==="una"?1:m[2]==="media"?30:parseInt(m[2],10);const hours=m[3].startsWith("hora");
+    const due=new Date(Date.now()+n*(hours?3600000:60000));
+    return saveVoiceReminder(m[1],due,`dentro de ${n===30&&m[2]==="media"?"media hora":n+(hours?" hora"+(n>1?"s":""):" minuto"+(n>1?"s":""))}`);
+  }
+  if(m=t.match(/^(?:recuerdame|recordame|recuerda|ponme un recordatorio(?: de| para)?)\s+(.+?)\s+a las\s+(\d{1,2})\s?(\d{2})?\b/)){
+    const due=new Date();due.setHours(+m[2],+(m[3]||0),0,0);if(due<new Date())due.setDate(due.getDate()+1);
+    return saveVoiceReminder(m[1],due,`a las ${pad(due.getHours())}:${pad(due.getMinutes())}`);
+  }
+  return false;
+}
+async function saveVoiceReminder(title,due,when){
+  try{await api("/api/reminders",{method:"POST",body:JSON.stringify({title,due_at:isoLocal(due)})});loadReminders();
+    if("Notification"in window&&Notification.permission==="default")Notification.requestPermission().catch(()=>{});
+    await say(`Anotado, ${TITLE}. Le recordaré «${title}» ${when}.`)}
+  catch(e){await say(e.message)}
+  return true;
+}
+
+/* ---------- Conversación ---------- */
+async function process(text){
+  text=(text||"").trim();if(!text)return;
+  addMsg(text,"user");$("send").disabled=true;
+  try{
+    if(await localIntent(text))return;
+    setState("thinking");
+    const brain=$("brain").value;let data;
+    if(brain==="ollama"){
+      history.push({role:"user",content:text});
+      try{data=await api("/api/chat/ollama",{method:"POST",body:JSON.stringify({messages:history})})}catch(err){history.pop();throw err}
+      history.push({role:"assistant",content:data.answer});history=history.slice(-12);sessionStorage.setItem("jarvis_history",JSON.stringify(history));
+    }else{
+      data=await api("/api/chat/gemini",{method:"POST",body:JSON.stringify({message:text,previous_interaction_id:geminiId})});
+      if(data.interaction_id){geminiId=data.interaction_id;localStorage.setItem("jarvis_gemini_id",geminiId)}
+    }
+    await say(data.answer);
+  }catch(e){setState("idle");addMsg("Error: "+e.message,"assistant")}
+  finally{$("send").disabled=false;if(!speaking)setState("idle")}
+}
+function send(){const t=$("message").value;$("message").value="";process(t)}
+$("send").onclick=send;$("message").addEventListener("keydown",e=>{if(e.key==="Enter")send()});
+$("newChat").onclick=()=>{history=[];geminiId="";sessionStorage.removeItem("jarvis_history");localStorage.removeItem("jarvis_gemini_id");$("chat").innerHTML="";addMsg(`Conversación reiniciada. A sus órdenes, ${TITLE}.`,"assistant")};
+$("brain").value="gemini";
+(function(){const c=cfg();$("cfgKey").value=c.key;$("cfgModel").value=c.model;$("cfgTitle").value=c.title;$("cfgName").value=c.name})();
+$("cfgSave").onclick=async()=>{localStorage.setItem("jv_key",$("cfgKey").value.trim());localStorage.setItem("jv_model",$("cfgModel").value.trim()||"gemini-3.8-flash");localStorage.setItem("jv_title",$("cfgTitle").value.trim()||"señor");localStorage.setItem("jv_name",$("cfgName").value.trim());await refreshStatus();say(`Configuración guardada, ${TITLE}.`)};
+[["¿Qué hora es?"],["Estado del sistema"],["Cuéntame un chiste"],["Busca noticias de hoy"]].forEach(([t])=>{const b=document.createElement("button");b.textContent=t;b.onclick=()=>process(t);$("chips").appendChild(b)});
+document.querySelectorAll("[data-app]").forEach(b=>b.onclick=()=>process("abre "+b.dataset.app));
+
+/* ---------- Diagnóstico ---------- */
+function statBox(label,val,unit,pct){
+  const cls=pct>=90?"crit":pct>=75?"warn":"";
+  return `<div class="stat">${label}<b>${val}${unit}</b><div class="bar"><i class="${cls}" style="width:${Math.min(100,pct||0)}%"></i></div></div>`;
+}
+async function refreshStats(){
+  try{
+    const s=await api("/api/system");let h="";
+    if(s.battery)h+=statBox("BATERÍA "+(s.battery.status==="Charging"?"⚡":""),s.battery.percent,"%",100-s.battery.percent);
+    if(s.disk!=null)h+=statBox("ALMACÉN. APP",s.disk,"%",s.disk);
+    if(s.mem_gb)h+=statBox("MEMORIA",s.mem_gb,"+ GB",0);
+    h+=statBox("RED",s.net.toUpperCase(),"",s.net==="sin conexión"?100:0);
+    $("stats").innerHTML=h||"<span class='hint'>Sin datos disponibles.</span>";
+  }catch(e){$("stats").innerHTML=`<span class="hint">${e.message}</span>`}
+}
+async function refreshStatus(){
+  try{const s=await api("/api/status");TITLE=s.title||"señor";
+    $("statusDot").innerHTML=`● ${navigator.onLine?"ONLINE":"SIN INTERNET"} · GEMINI ${s.gemini_configured?"LISTO":"SIN CLAVE"}`}
+  catch(e){$("statusDot").textContent="● "+e.message.toUpperCase()}
+}
+
+/* ---------- Recordatorios ---------- */
+async function loadReminders(){
+  try{
+    const items=await api("/api/reminders");$("reminders").innerHTML="";
+    items.forEach(r=>{
+      const d=document.createElement("div");d.className="reminder";
+      const span=document.createElement("span");span.textContent=(r.done?"✓ ":"⏰ ")+r.title+" — "+r.due_at.replace("T"," ");d.appendChild(span);
+      const box=document.createElement("span");
+      if(!r.done){const b=document.createElement("button");b.textContent="Hecho";b.onclick=async()=>{await api(`/api/reminders/${r.id}/done`,{method:"POST",body:"{}"});loadReminders()};box.appendChild(b)}
+      const x=document.createElement("button");x.textContent="🗑️";x.onclick=async()=>{await api(`/api/reminders/${r.id}`,{method:"DELETE"});loadReminders()};box.appendChild(x);
+      d.appendChild(box);$("reminders").appendChild(d);
+      if(!r.done&&new Date(r.due_at)<=new Date()&&!notified.has(r.id)){
+        notified.add(r.id);
+        try{if("Notification"in window&&Notification.permission==="granted"&&swReg)swReg.showNotification("J.A.R.V.I.S.",{body:r.title,icon:"icon-192.png",vibrate:[300,150,300],tag:"rem"+r.id});if(navigator.vibrate)navigator.vibrate([300,150,300])}catch(_){}
+        say(`Disculpe la interrupción, ${TITLE}. Recordatorio: ${r.title}.`);
+      }
+    });
+  }catch(e){$("reminders").textContent=e.message}
+}
+$("addReminder").onclick=async()=>{
+  try{await api("/api/reminders",{method:"POST",body:JSON.stringify({title:$("remTitle").value,due_at:$("remDate").value})});$("remTitle").value="";loadReminders();
+    if("Notification"in window&&Notification.permission==="default")Notification.requestPermission().catch(()=>{})}
+  catch(e){alert(e.message)}
+};
+$("refreshRem").onclick=loadReminders;
+
+/* ---------- Arranque ---------- */
+const bootLines=["Cargando núcleo de inteligencia…","Calibrando reactor…","Verificando sensores del sistema…","Estableciendo enlace de voz…","Todos los sistemas en línea."];
+$("bootBtn").onclick=async()=>{
+  $("bootBtn").style.display="none";
+  const log=$("bootLog");
+  for(const l of bootLines){log.textContent+="› "+l+"\n";log.style.whiteSpace="pre";await new Promise(r=>setTimeout(r,420))}
+  $("boot").classList.add("hide");
+  await refreshStatus();refreshStats();loadReminders();
+  await say(`${greeting()}, ${TITLE}. Todos los sistemas están operativos. ¿En qué puedo ayudarle?`);
+  if(!cfg().key){await say(`Antes de empezar necesito su clave de Gemini, ${TITLE}. Está en Ajustes, al final de la página.`);$("cfgKey").scrollIntoView({behavior:"smooth",block:"center"})}
+  if(localStorage.getItem("jarvis_wake")==="1"&&SR&&secure){wakeOn=true;setWakeUI();startWake()}
+};
+$("chat").appendChild(Object.assign(document.createElement("div"),{className:"msg assistant",textContent:"Sistemas iniciados. Toque el reactor para hablar. Primero pegue su clave de Gemini en Ajustes."}));
+setInterval(()=>{if(!document.hidden){refreshStats();loadReminders()}},6000);setInterval(refreshStatus,60000);
+setWakeUI();
+</script></body></html>
